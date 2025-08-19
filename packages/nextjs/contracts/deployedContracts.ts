@@ -2432,7 +2432,7 @@ const deployedContracts = {
   },
   50312: {
     CovusVault: {
-      address: "0x826Da1285FE33E233595c69df23f5AB199eD1c6a",
+      address: "0x875cAca82A3d62b021161B6861FC12AF99838136",
       abi: [
         {
           inputs: [
@@ -3687,10 +3687,10 @@ const deployedContracts = {
         renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 153732471,
+      deployedOnBlock: 153988030,
     },
     StakingManager: {
-      address: "0xCB68999Ec762C57d5c0F33EF93F734A180081BBC",
+      address: "0x93E04c0Ed3B95580147A92d7ED7d48CBD3598362",
       abi: [
         {
           inputs: [
@@ -3805,19 +3805,6 @@ const deployedContracts = {
           type: "function",
         },
         {
-          inputs: [
-            {
-              internalType: "uint256",
-              name: "amount",
-              type: "uint256",
-            },
-          ],
-          name: "unstake",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-        {
           inputs: [],
           name: "vault",
           outputs: [
@@ -3836,7 +3823,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 153732682,
+      deployedOnBlock: 153988056,
     },
   },
 } as const;
