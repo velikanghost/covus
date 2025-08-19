@@ -107,7 +107,7 @@ const Home: NextPage = () => {
     }
   };
 
-  const formatNumber = (value: bigint | undefined, decimals: number = 18) => {
+  const formatNumber = (value: bigint | undefined) => {
     if (!value) return "0";
     return Number(formatEther(value)).toLocaleString();
   };

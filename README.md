@@ -1,6 +1,6 @@
 # Covus - Liquid Staking Protocol
 
-A decentralized liquid staking protocol built with Scaffold-STT 2, allowing users to stake STT and receive liquid csSTT tokens representing their staked position.
+A decentralized liquid staking protocol built with Scaffold-ETH 2, allowing users to stake STT and receive liquid csSTT tokens representing their staked position.
 
 ## 🏗️ Architecture
 
@@ -167,6 +167,6 @@ MIT License - see LICENSE file for details
 
 ## 🙏 Acknowledgments
 
-- Built with [Scaffold-STT 2](https://github.com/scaffold-eth/scaffold-eth-2)
+- Built with [Scaffold-ETH 2](https://github.com/scaffold-eth/scaffold-eth-2)
 - Inspired by protocols like Lido, RocketPool, and Frax
 - Uses OpenZeppelin contracts for security and standards compliance
