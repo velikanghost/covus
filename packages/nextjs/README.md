@@ -6,8 +6,8 @@ A modern, user-friendly interface for the Covus liquid staking protocol built wi
 
 ### **User Interface**
 
-- **Stake ETH**: Deposit ETH to receive liquid csSTT tokens
-- **Withdraw ETH**: Request withdrawals with instant or queued processing
+- **Stake STT**: Deposit STT to receive liquid csSTT tokens
+- **Withdraw STT**: Request withdrawals with instant or queued processing
 - **Position Tracking**: Real-time view of your staking position and rewards
 - **Protocol Stats**: Live statistics including TVL, exchange rate, and APY
 
@@ -50,10 +50,10 @@ packages/nextjs/
 ### **For End Users**
 
 1. **Connect Wallet**: Use the connect button in the header
-2. **Stake ETH**:
-   - Navigate to the "Stake ETH" tab
+2. **Stake STT**:
+   - Navigate to the "Stake STT" tab
    - Enter the amount you want to stake
-   - Click "Stake ETH" and confirm the transaction
+   - Click "Stake STT" and confirm the transaction
 3. **Track Position**:
    - View your csSTT shares and staked value
    - Monitor exchange rate and your share percentage
@@ -72,13 +72,13 @@ packages/nextjs/
 2. **Testing Flow**:
 
    - Use the Debug page (`/debug`) to simulate protocol operations
-   - Fund the StakingManager with ETH
+   - Fund the StakingManager with STT
    - Test staking, rewards, and unstaking operations
    - Return to main page to test user interactions
 
 3. **Protocol Simulation**:
    ```
-   1. Fund StakingManager → 2. Stake ETH → 3. Send Rewards →
+   1. Fund StakingManager → 2. Stake STT → 3. Send Rewards →
    4. Report Rewards → 5. Test User Deposits → 6. Test Withdrawals
    ```
 

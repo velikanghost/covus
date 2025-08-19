@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { formatEther, parseEther } from "viem";
 import { useAccount } from "wagmi";
-import { ArrowDownIcon, ArrowUpIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/24/outline";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
 interface StakingCardProps {
@@ -13,7 +13,7 @@ interface StakingCardProps {
   onSuccess?: () => void;
 }
 
-export const StakingCard = ({ type, userBalance, maxAmount, onSuccess }: StakingCardProps) => {
+export const StakingCard = ({ type, userBalance, onSuccess }: StakingCardProps) => {
   const { address: connectedAddress } = useAccount();
   const [amount, setAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -35,7 +35,7 @@ export const StakingCard = ({ type, userBalance, maxAmount, onSuccess }: Staking
     try {
       if (isStake) {
         await depositETH({
-          functionName: "depositETH",
+          functionName: "depositSTT",
           args: [connectedAddress],
           value: parseEther(amount),
         });
