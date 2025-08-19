@@ -1,21 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { NextPage } from "next";
 import { formatEther, parseEther } from "viem";
 import { useAccount, useBalance } from "wagmi";
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  BoltIcon,
-  ChartBarIcon,
-  ChevronRightIcon,
-  ClockIcon,
-  CurrencyDollarIcon,
-  ShieldCheckIcon,
-  WalletIcon,
-} from "@heroicons/react/24/outline";
-import { Address } from "~~/components/scaffold-eth";
+import { BoltIcon, ChevronRightIcon, WalletIcon } from "@heroicons/react/24/outline";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
 const Home: NextPage = () => {
@@ -66,11 +55,7 @@ const Home: NextPage = () => {
   // Calculate actual total assets (including queued assets) for display
   const actualTotalAssets = totalAssets && queuedAssets ? totalAssets + queuedAssets : totalAssets;
 
-  // Calculate exchange rate (how many ETH 1 csSTT is worth) - using actual total assets
-  const exchangeRate =
-    actualTotalAssets && totalSupply && totalSupply > 0n ? Number(actualTotalAssets) / Number(totalSupply) : 1;
-
-  // Calculate reverse exchange rate (how many csSTT 1 ETH gets you)
+  // Calculate reverse exchange rate (how many csSTT 1 STT gets you)
   const reverseExchangeRate =
     totalSupply && actualTotalAssets && actualTotalAssets > 0n ? Number(totalSupply) / Number(actualTotalAssets) : 1;
 
@@ -104,7 +89,7 @@ const Home: NextPage = () => {
 
     setIsWithdrawing(true);
     try {
-      // Convert ETH amount to shares for withdrawal
+      // Convert STT amount to shares for withdrawal
       const sharesToBurn =
         totalSupply && actualTotalAssets && actualTotalAssets > 0n
           ? (parseEther(withdrawAmount) * totalSupply) / actualTotalAssets
@@ -131,7 +116,7 @@ const Home: NextPage = () => {
     if (activeTab === "stake") {
       setDepositAmount(formatEther(userETHBalance?.value || 0n));
     } else {
-      // For withdrawal, show the ETH value of user's shares
+      // For withdrawal, show the STT value of user's shares
       setWithdrawAmount(formatEther(userAssets || 0n));
     }
   };
@@ -142,8 +127,7 @@ const Home: NextPage = () => {
         <div className="container mx-auto px-6 py-8">
           {/* Protocol Title */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Liquid Staking Protocol</h1>
-            <p className="text-lg text-gray-600">Stake ETH and receive liquid csSTT tokens while earning rewards</p>
+            <p className="text-lg text-gray-600">Stake STT and receive liquid csSTT tokens while earning rewards</p>
           </div>
 
           {/* Protocol Stats Cards */}
@@ -152,7 +136,7 @@ const Home: NextPage = () => {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-500">Total Staked</h3>
               </div>
-              <p className="text-2xl font-bold text-gray-900">{formatNumber(totalAssets)} ETH</p>
+              <p className="text-2xl font-bold text-gray-900">{formatNumber(totalAssets)} STT</p>
               <p className="text-sm text-gray-500">Across {validatorCount.toLocaleString()} validators</p>
             </div>
 
@@ -176,19 +160,19 @@ const Home: NextPage = () => {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-500">Exchange Rate</h3>
               </div>
-              <p className="text-2xl font-bold text-gray-900">1 ETH = {reverseExchangeRate.toFixed(3)} csSTT</p>
+              <p className="text-2xl font-bold text-gray-900">1 STT = {reverseExchangeRate.toFixed(3)} csSTT</p>
               <p className="text-sm text-gray-500">Updated every epoch</p>
             </div>
           </div>
 
           {/* Main Content */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Stake ETH Section */}
+            {/* Stake STT Section */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Stake ETH</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Stake STT</h2>
                 <p className="text-gray-600 mb-6">
-                  Stake your ETH to receive liquid csSTT tokens and start earning rewards
+                  Stake your STT to receive liquid csSTT tokens and start earning rewards
                 </p>
 
                 {/* Tabs */}
@@ -228,7 +212,7 @@ const Home: NextPage = () => {
                         className="w-full px-4 py-3 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       />
                       <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
-                        <span className="text-gray-500">ETH</span>
+                        <span className="text-gray-500">STT</span>
                         <button
                           onClick={setMaxAmount}
                           className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
@@ -240,7 +224,7 @@ const Home: NextPage = () => {
                     <p className="text-sm text-gray-500 mt-1">
                       Balance:{" "}
                       {activeTab === "stake"
-                        ? formatNumber(userETHBalance?.value) + " ETH"
+                        ? formatNumber(userETHBalance?.value) + " STT"
                         : formatNumber(userShares) + " csSTT"}
                     </p>
                   </div>
@@ -265,10 +249,10 @@ const Home: NextPage = () => {
                           {activeTab === "stake"
                             ? isDepositing
                               ? "Staking..."
-                              : "Stake ETH"
+                              : "Stake STT"
                             : isWithdrawing
                               ? "Unstaking..."
-                              : "Unstake ETH"}
+                              : "Unstake STT"}
                         </span>
                         <ChevronRightIcon className="h-5 w-5" />
                       </>
@@ -289,8 +273,8 @@ const Home: NextPage = () => {
 
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Staked ETH</span>
-                    <span className="font-medium">{formatNumber(userAssets)} ETH</span>
+                    <span className="text-gray-600">Staked STT</span>
+                    <span className="font-medium">{formatNumber(userAssets)} STT</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">csSTT Balance</span>
@@ -298,13 +282,13 @@ const Home: NextPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Pending Rewards</span>
-                    <span className="font-medium text-green-600">+{pendingRewards.toFixed(3)} ETH</span>
+                    <span className="font-medium text-green-600">+{pendingRewards.toFixed(3)} STT</span>
                   </div>
                   <div className="border-t pt-3">
                     <div className="flex justify-between">
                       <span className="font-semibold text-gray-900">Total Value</span>
                       <span className="font-bold text-gray-900">
-                        {(Number(formatEther(userAssets || 0n)) + pendingRewards).toFixed(1)} ETH
+                        {(Number(formatEther(userAssets || 0n)) + pendingRewards).toFixed(1)} STT
                       </span>
                     </div>
                   </div>
@@ -329,23 +313,6 @@ const Home: NextPage = () => {
                   <p>No recent activity</p>
                 </div>
               </div>
-
-              {/* Debug Info - Remove in production */}
-              {connectedAddress && (
-                <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200">
-                  <h4 className="text-sm font-semibold text-yellow-800 mb-2">Debug Info</h4>
-                  <div className="text-xs text-yellow-700 space-y-1">
-                    <p>Total Assets (Free): {formatNumber(totalAssets)} ETH</p>
-                    <p>Queued Assets: {formatNumber(queuedAssets)} ETH</p>
-                    <p>Actual Total Assets: {formatNumber(actualTotalAssets)} ETH</p>
-                    <p>Total Supply: {formatNumber(totalSupply)} csSTT</p>
-                    <p>Your Shares: {formatNumber(userShares)} csSTT</p>
-                    <p>Your Assets Value: {formatNumber(userAssets)} ETH</p>
-                    <p>Exchange Rate: 1 csSTT = {exchangeRate.toFixed(6)} ETH</p>
-                    <p>Reverse Rate: 1 ETH = {reverseExchangeRate.toFixed(6)} csSTT</p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
