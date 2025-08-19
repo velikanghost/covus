@@ -7,7 +7,7 @@ import { CovusVault } from "./CovusVault.sol";
 
 /**
  * @title StakingManager
- * @notice Mock validator operator that takes ETH from the vault, simulates staking,
+ * @notice Mock validator operator that takes STT from the vault, simulates staking,
  *         and sends rewards or principal back later.
  */
 contract StakingManager {
@@ -24,7 +24,7 @@ contract StakingManager {
     }
 
     /**
-     * @notice Pull WETH from vault and simulate staking it in validators.
+     * @notice Pull WSTT from vault and simulate staking it in validators.
      *         In production this would trigger ETH2 deposits via depositContract.
      */
     function stake(uint256 amount) external {
@@ -32,35 +32,22 @@ contract StakingManager {
         require(IERC20(address(WETH)).transferFrom(address(vault), address(this), amount), "pull failed");
 
         emit Staked(msg.sender, amount);
-        // In a real setup, this ETH would now be locked in Beacon Chain validators.
+        // In a real setup, this STT would now be locked in validators.
     }
 
     /**
      * @notice Simulate validator rewards being sent back to vault.
-     * @dev Here we just mint ETH from nowhere in local tests (unsafe in prod!)
+     * @dev Here we just mint STT from nowhere in local tests
      */
     function sendRewards(uint256 amount) external {
-        // For testing, we need to have ETH to send
-        require(address(this).balance >= amount, "insufficient ETH balance");
-        // Send ETH directly to vault's receive() to trigger wrap & accounting
+        // For testing, we need to have STT to send
+        require(address(this).balance >= amount, "insufficient STT balance");
+        // Send STT directly to vault's receive() to trigger wrap & accounting
         (bool ok, ) = payable(address(vault)).call{ value: amount }("");
         require(ok, "send failed");
         emit RewardsSent(address(vault), amount);
     }
 
-    /**
-     * @notice Simulate unstaking: send ETH back to vault to replenish liquidity.
-     * @dev In real life, validator exits would credit ETH here after withdrawal delay.
-     */
-    function unstake(uint256 amount) external {
-        // For testing, we need to have ETH to send
-        require(address(this).balance >= amount, "insufficient ETH balance");
-        // Pay vault in ETH
-        (bool ok, ) = payable(address(vault)).call{ value: amount }("");
-        require(ok, "unstake send failed");
-        emit Unstaked(address(vault), amount);
-    }
-
-    // Accept ETH
+    // Accept STT
     receive() external payable {}
 }

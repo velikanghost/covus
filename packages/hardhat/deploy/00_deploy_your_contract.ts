@@ -21,101 +21,49 @@ const deployContracts: DeployFunction = async function (hre: HardhatRuntimeEnvir
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
 
-  console.log("🚀 Deploying Covus Liquid Staking Protocol...");
-
-  // Deploy MockWETH first
-  console.log("📦 Deploying MockWETH...");
-  await deploy("MockWETH", {
-    from: deployer,
-    args: [],
-    log: true,
-    autoMine: true,
-  });
-  const mockWETH = await hre.ethers.getContract<Contract>("MockWETH", deployer);
+  console.log("Starting deployment...");
 
   // Deploy CovusVault vault
-  console.log("🏦 Deploying CovusVault vault...");
+  console.log("Deploying CovusVault...");
   await deploy("CovusVault", {
     from: deployer,
-    args: [mockWETH.target],
+    args: ["0xf22ef0085f6511f70b01a68f360dcc56261f768a"],
     log: true,
     autoMine: true,
   });
   const vault = await hre.ethers.getContract<Contract>("CovusVault", deployer);
 
   // Deploy StakingManager
-  console.log("⚡ Deploying StakingManager...");
+  console.log("Deploying StakingManager...");
   await deploy("StakingManager", {
     from: deployer,
-    args: [vault.target, mockWETH.target],
+    args: [vault.target, "0xf22ef0085f6511f70b01a68f360dcc56261f768a"],
     log: true,
     autoMine: true,
   });
   const stakingManager = await hre.ethers.getContract<Contract>("StakingManager", deployer);
 
-  // Deploy MockUSDC for additional trading pairs
-  console.log("💵 Deploying MockUSDC...");
-  await deploy("MockUSDC", {
-    from: deployer,
-    args: [],
-    log: true,
-    autoMine: true,
-  });
-  const mockUSDC = await hre.ethers.getContract<Contract>("MockUSDC", deployer);
-
-  // Deploy DEX with Bottles token
-  console.log("🦄 Deploying DEX...");
-  await deploy("DEX", {
-    from: deployer,
-    args: [vault.target],
-    log: true,
-    autoMine: true,
-  });
-  const dex = await hre.ethers.getContract<Contract>("DEX", deployer);
-
   // Only set up contract state on local network
   if (hre.network.name == "localhost" || hre.network.name == "somniaTestnet") {
-    console.log("🔧 Setting up initial configuration for localhost...");
+    console.log("Setting up initial configuration for localhost...");
 
-    // Get the deployer signer
     const deployerSigner = await hre.ethers.getSigner(deployer);
 
-    // Fund the vault with initial ETH for testing
-    const initialFunding = hre.ethers.parseEther("2");
-    await vault.depositSTT(deployer, { value: initialFunding });
-    console.log("✅ Funded vault with", hre.ethers.formatEther(initialFunding), "STT (minted shares)");
-
-    // Fund the staking manager with some ETH for testing
+    // Fund the staking manager with some STT for testing
     await deployerSigner.sendTransaction({
       to: stakingManager.target,
       value: hre.ethers.parseEther("2"),
     });
     console.log("✅ Funded staking manager with 2 STT");
-
-    // Initialize DEX with liquidity
-    console.log("💧 Initializing DEX liquidity...");
-    const dexAddress = await dex.getAddress();
-    console.log("Approving DEX (" + dexAddress + ") to take csSTT from main account...");
-    await vault.approve(dexAddress, hre.ethers.parseEther("10000"));
-    console.log("INIT exchange...");
-    await dex.init(hre.ethers.parseEther("1"), {
-      value: hre.ethers.parseEther("1"),
-      gasLimit: 200000,
-    });
   }
 
+  // Approve StakingManager to spend WSTT from vault
+  await vault.approveWSTT(stakingManager.target, hre.ethers.parseEther("10000000"));
+  console.log("✅ Approved StakingManager to spend vault WSTT");
+
   console.log("\n🎉 Covus Liquid Staking Protocol deployed successfully!");
-  console.log("   MockWETH:", mockWETH.target);
   console.log("   CovusVault Vault:", vault.target);
   console.log("   StakingManager:", stakingManager.target);
-  console.log("   MockUSDC:", mockUSDC.target);
-  console.log("   DEX:", dex.target);
-
-  console.log("\n🔗 Next Steps:");
-  console.log("   1. Start the frontend: yarn start");
-  console.log("   2. Test deposits and withdrawals");
-  console.log("   3. Simulate staking rewards via StakingManager");
-  console.log("   4. Test DEX trading at /dex");
 };
 
 export default deployContracts;

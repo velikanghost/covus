@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 /**
  * Minimal ERC-4626 liquid staking-style vault with a FIFO withdrawal queue.
- * - Underlying asset: WETH (wraps/unlocks ETH for user convenience)
+ * - Underlying asset: WSTT (wraps/unlocks STT for user convenience)
  * - Shares token: ERC20 (this contract is the shares token via OZ ERC4626/ ERC20 inheritance)
  * - Instant redemptions via standard ERC-4626 functions when there is sufficient on-hand liquidity
  * - Queued withdrawals when there isn't enough liquidity (typical for liquid staking protocols)
@@ -27,7 +27,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     /// @notice FIFO withdrawal queue
     struct Withdrawal {
         address owner; // receiver of assets when processed
-        uint256 assets; // amount of underlying (WETH) owed
+        uint256 assets; // amount of underlying (WSTT) owed
         bool toSTT; // unwrap to native STT on payout
     }
 
@@ -55,7 +55,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
                                 DEPOSITS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Convenience: deposit native STT; it is wrapped into WETH and deposited.
+    /// @notice Convenience: deposit native STT; it is wrapped into WSTT and deposited.
     function depositSTT(address receiver) external payable returns (uint256 shares) {
         require(msg.value > 0, "ZERO_STT");
 
@@ -72,10 +72,10 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
         _mint(receiver, shares);
     }
 
-    /// @notice Owner can report rewards by transferring WETH in and emitting an event.
-    /// Simply send WETH to this contract; totalAssets() will reflect it.
+    /// @notice Owner can report rewards by transferring WSTT in and emitting an event.
+    /// Simply send WSTT to this contract; totalAssets() will reflect it.
     function reportRewards(uint256 amount) external onlyOwner {
-        // Optional helper: pull WETH from owner (needs approve first)
+        // Optional helper: pull WSTT from owner (needs approve first)
         if (amount > 0) {
             IERC20(address(asset())).transferFrom(msg.sender, address(this), amount);
             emit RewardsReported(amount);
@@ -180,7 +180,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
         return tail - head;
     }
 
-    /// @notice View helper: free (immediately withdrawable) liquidity in underlying units (WETH).
+    /// @notice View helper: free (immediately withdrawable) liquidity in underlying units (WSTT).
     function freeLiquidity() public view returns (uint256) {
         return IERC20(address(asset())).balanceOf(address(this)) - queuedAssets;
     }
@@ -189,18 +189,18 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
                         OWNER / ADMIN UTILITIES (DEMO)
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Owner can unwrap some WETH to ETH to build an ETH buffer for queued payouts to ETH.
+    /// @notice Owner can unwrap some WSTT to STT to build an STT buffer for queued payouts to STT.
     function unwrapToSTT(uint256 amount) external onlyOwner {
         IWETH(address(asset())).withdraw(amount);
     }
 
-    /// @notice Owner can wrap any stray ETH back to WETH (e.g., from direct transfers).
+    /// @notice Owner can wrap any stray STT back to WSTT (e.g., from direct transfers).
     function wrapSTT() external onlyOwner {
         uint256 bal = address(this).balance;
         if (bal > 0) IWETH(address(asset())).deposit{ value: bal }();
     }
 
-    /// @notice Owner can approve WETH spending for staking operations.
+    /// @notice Owner can approve WSTT spending for staking operations.
     function approveWSTT(address spender, uint256 amount) external onlyOwner {
         IERC20(address(asset())).approve(spender, amount);
     }
