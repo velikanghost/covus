@@ -20,8 +20,10 @@ const roboto = Roboto({
 });
 
 export const metadata = getMetadata({
-  title: "Scaffold-ETH 2 App",
-  description: "Built with 🏗 Scaffold-ETH 2",
+  title: "Covus",
+  description:
+    "Covus is a next-generation liquid staking protocol that combines security, transparency, and high yields to provide the best staking experience.",
+  imageRelativePath: "/favicon.png",
 });
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {

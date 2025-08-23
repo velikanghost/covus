@@ -2,9 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { hardhat } from "viem/chains";
 import { CurrencyDollarIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { HeartIcon } from "@heroicons/react/24/outline";
 import { SwitchTheme } from "~~/components/SwitchTheme";
-import { BuidlGuidlLogo } from "~~/components/assets/BuidlGuidlLogo";
 import { Faucet } from "~~/components/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useGlobalState } from "~~/services/store/store";
@@ -38,8 +36,8 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/analytics" className="text-gray-300 hover:text-white transition-colors text-sm">
-                  Protocol Analytics
+                <Link href="/withdrawal" className="text-gray-300 hover:text-white transition-colors text-sm">
+                  Withdrawal Queue
                 </Link>
               </li>
             </ul>
@@ -50,7 +48,7 @@ export const Footer = () => {
             <h4 className="text-lg font-semibold text-white mb-4">Company</h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/analytics" className="text-gray-300 hover:text-white transition-colors text-sm">
+                <Link href="#" className="text-gray-300 hover:text-white transition-colors text-sm">
                   About Us
                 </Link>
               </li>
@@ -67,7 +65,7 @@ export const Footer = () => {
             <h4 className="text-lg font-semibold text-white mb-4">Connect</h4>
             <div className="flex space-x-4">
               <a
-                href="https://github.com/scaffold-eth/se-2"
+                href="https://github.com/velikanghost/covus"
                 target="_blank"
                 rel="noreferrer"
                 className="text-gray-300 hover:text-white transition-colors"

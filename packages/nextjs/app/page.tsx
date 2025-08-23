@@ -5,11 +5,9 @@ import type { NextPage } from "next";
 import { formatEther } from "viem";
 import {
   ArrowRightIcon,
-  ArrowTrendingUpIcon,
   BoltIcon,
   ChartBarIcon,
   CurrencyDollarIcon,
-  GlobeAltIcon,
   ShieldCheckIcon,
   UsersIcon,
 } from "@heroicons/react/24/outline";
