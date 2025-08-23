@@ -20,11 +20,6 @@ const Home: NextPage = () => {
     functionName: "totalAssets",
   });
 
-  const { data: totalSupply } = useScaffoldReadContract({
-    contractName: "CovusVault",
-    functionName: "totalSupply",
-  });
-
   const formatNumber = (value: bigint | undefined) => {
     if (!value) return "0";
     return Number(formatEther(value)).toLocaleString();
