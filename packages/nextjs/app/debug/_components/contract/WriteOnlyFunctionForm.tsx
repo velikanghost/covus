@@ -54,6 +54,7 @@ export const WriteOnlyFunctionForm = ({
           abi: abi,
           args: getParsedContractFunctionArgs(form),
           value: BigInt(txValue),
+          gas: BigInt(5000000), // Set minimum gas limit to 5,000,000
         };
         await simulateContractWriteAndNotifyError({
           wagmiConfig,
