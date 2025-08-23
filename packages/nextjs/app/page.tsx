@@ -57,17 +57,20 @@ const Home: NextPage = () => {
       title: "Liquid Staking",
       description:
         "Stake your STT and receive liquid csSTT tokens that can be used in DeFi protocols while earning rewards.",
-      icon: "💧",
+      icon: BoltIcon,
+      iconColor: "text-blue-400",
     },
     {
       title: "High APY",
       description: "Earn competitive yields through our optimized staking strategy and validator selection.",
-      icon: "📈",
+      icon: ChartBarIcon,
+      iconColor: "text-purple-400",
     },
     {
       title: "Transparent",
       description: "All protocol data is publicly available on-chain for complete transparency.",
-      icon: "👁️",
+      icon: ShieldCheckIcon,
+      iconColor: "text-green-400",
     },
   ];
 
@@ -76,14 +79,14 @@ const Home: NextPage = () => {
       {/* Hero Section */}
       <div className="container mx-auto px-6 py-20">
         <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 font-raleway">
             Stake STT
             <br />
-            <span className="text-6xl md:text-7xl bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+            <span className="text-6xl md:text-7xl bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent font-raleway">
               Stay Liquid
             </span>
           </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8 font-roboto">
             Covus is a next-generation liquid staking protocol where you can earn staking rewards with Somnia validators
             while keeping your assets liquid through an ERC-4626 vault with instant withdrawals and a fair queue system.
           </p>
@@ -99,25 +102,28 @@ const Home: NextPage = () => {
         </div>
 
         {/* Stats Section */}
-        {/* <div className="flex items-center justify-center gap-6 mb-20">
+        <div className="flex items-center justify-center gap-6 mb-20">
           {stats.map(stat => (
-            <div key={stat.name} className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 w-1/4">
-              <div className="flex items-center mb-4">
+            <div
+              key={stat.name}
+              className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 min-w-[200px] text-center"
+            >
+              <div className="flex items-center justify-center mb-4">
                 <stat.icon className="h-8 w-8 text-blue-400" />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-1">{stat.value}</h3>
-              <p className="text-[10px] tracking-[1px] text-gray-300 uppercase">{stat.name}</p>
+              <h3 className="text-2xl font-bold text-white mb-1 font-raleway">{stat.value}</h3>
+              <p className="text-[10px] tracking-[1px] text-gray-300 uppercase font-roboto">{stat.name}</p>
             </div>
           ))}
-        </div> */}
+        </div>
       </div>
 
       {/* Features Section */}
       <div className="bg-white/5 backdrop-blur-sm py-20">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">Why Choose Covus?</h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+            <h2 className="text-4xl font-bold text-white mb-4 font-raleway">Why Choose Covus?</h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto font-roboto">
               Covus is a next-generation liquid staking protocol that combines security, transparency, and high yields
               to provide the best staking experience.
             </p>
@@ -129,9 +135,12 @@ const Home: NextPage = () => {
                 key={index}
                 className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-white/10 hover:bg-white/10 transition-colors"
               >
-                <div className="text-4xl mb-6">{feature.icon}</div>
-                <h3 className="text-xl font-semibold text-white mb-4">{feature.title}</h3>
-                <p className="text-gray-300">{feature.description}</p>
+                <h3 className="text-2xl font-bold text-white mb-2 font-raleway">{feature.title}</h3>
+                <span className="text-gray-400 text-sm">*********</span>
+                <p className="text-gray-300 mb-8 leading-relaxed font-roboto">{feature.description}</p>
+                <div className="flex justify-end mb-6">
+                  <feature.icon className={`h-24 w-24 ${feature.iconColor}`} />
+                </div>
               </div>
             ))}
           </div>
@@ -141,8 +150,8 @@ const Home: NextPage = () => {
       {/* CTA Section */}
       <div className="container mx-auto px-6 py-20">
         <div className="text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">Ready to Start Staking?</h2>
-          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+          <h2 className="text-4xl font-bold text-white mb-6 font-raleway">Ready to Start Staking?</h2>
+          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto font-roboto">
             Join thousands of users who are already earning rewards with Covus. Start your staking journey today.
           </p>
           <Link

@@ -28,10 +28,6 @@ export const menuLinks: HeaderMenuLink[] = [
     label: "Withdrawal",
     href: "/withdrawal",
   },
-  {
-    label: "Analytics",
-    href: "/analytics",
-  },
 ];
 
 export const HeaderMenuLinks = () => {
@@ -48,7 +44,7 @@ export const HeaderMenuLinks = () => {
               passHref
               className={`${
                 isActive ? "text-white" : "text-gray-300"
-              } hover:text-white px-4 py-2 transition-colors font-medium`}
+              } hover:text-white px-4 py-2 transition-colors font-medium font-raleway`}
             >
               {icon}
               <span>{label}</span>
@@ -93,8 +89,7 @@ export const Header = () => {
             <Image alt="Covus logo" className="cursor-pointer" fill src="/logo.svg" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold leading-tight text-white text-xl">Covus</span>
-            <span className="text-xs text-gray-400">Liquid Staking Protocol</span>
+            <span className="font-bold leading-tight text-white text-xl font-raleway">Covus</span>
           </div>
         </Link>
         <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">
