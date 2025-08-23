@@ -125,7 +125,10 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
 
       const makeWriteWithParams = () =>
         wagmiContractWrite.writeContractAsync(
-          writeContractObject,
+          {
+            ...writeContractObject,
+            gas: BigInt(5000000), // Set minimum gas limit to 5,000,000
+          },
           mutateOptions as
             | MutateOptions<
                 WriteContractReturnType,
@@ -171,6 +174,7 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
         abi: deployedContractData.abi as Abi,
         address: deployedContractData.address,
         ...variables,
+        gas: BigInt(5000000), // Set minimum gas limit to 5,000,000
       } as WriteContractVariables<Abi, string, any[], Config, number>,
       options as
         | MutateOptions<

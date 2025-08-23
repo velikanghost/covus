@@ -1,323 +1,162 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import type { NextPage } from "next";
-import { formatEther, parseEther } from "viem";
-import { useAccount, useBalance } from "wagmi";
-import { BoltIcon, ChevronRightIcon, WalletIcon } from "@heroicons/react/24/outline";
-import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { formatEther } from "viem";
+import {
+  ArrowRightIcon,
+  BoltIcon,
+  ChartBarIcon,
+  CurrencyDollarIcon,
+  ShieldCheckIcon,
+  UsersIcon,
+} from "@heroicons/react/24/outline";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
 const Home: NextPage = () => {
-  const { address: connectedAddress } = useAccount();
-  const [depositAmount, setDepositAmount] = useState("");
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [isDepositing, setIsDepositing] = useState(false);
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"stake" | "unstake">("stake");
-
   // Read contract data
   const { data: totalAssets } = useScaffoldReadContract({
     contractName: "CovusVault",
     functionName: "totalAssets",
   });
 
-  const { data: totalSupply } = useScaffoldReadContract({
-    contractName: "CovusVault",
-    functionName: "totalSupply",
-  });
-
-  const { data: userShares } = useScaffoldReadContract({
-    contractName: "CovusVault",
-    functionName: "balanceOf",
-    args: [connectedAddress],
-  });
-
-  const { data: userAssets } = useScaffoldReadContract({
-    contractName: "CovusVault",
-    functionName: "convertToAssets",
-    args: [userShares || 0n],
-  });
-
-  const { data: queuedAssets } = useScaffoldReadContract({
-    contractName: "CovusVault",
-    functionName: "queuedAssets",
-  });
-
-  // User balances
-  const { data: userETHBalance } = useBalance({
-    address: connectedAddress,
-  });
-
-  // Write contract functions
-  const { writeContractAsync: depositETH } = useScaffoldWriteContract("CovusVault");
-  const { writeContractAsync: requestWithdrawal } = useScaffoldWriteContract("CovusVault");
-
-  // Calculate actual total assets (including queued assets) for display
-  const actualTotalAssets = totalAssets && queuedAssets ? totalAssets + queuedAssets : totalAssets;
-
-  // Calculate reverse exchange rate (how many csSTT 1 STT gets you)
-  const reverseExchangeRate =
-    totalSupply && actualTotalAssets && actualTotalAssets > 0n ? Number(totalSupply) / Number(actualTotalAssets) : 1;
-
-  // Calculate APY (mock calculation for demo)
-  const mockAPY = 4.2;
-  const mockAPYChange = 0.2;
-  const protocolFee = 10;
-  const validatorCount = 89106;
-  const pendingRewards = userAssets ? Number(formatEther(userAssets)) * 0.01 : 0; // 1% of staked amount as pending rewards
-
-  const handleDeposit = async () => {
-    if (!depositAmount || !connectedAddress) return;
-
-    setIsDepositing(true);
-    try {
-      await depositETH({
-        functionName: "depositSTT",
-        args: [connectedAddress],
-        value: parseEther(depositAmount),
-      });
-      setDepositAmount("");
-    } catch (error) {
-      console.error("Deposit failed:", error);
-    } finally {
-      setIsDepositing(false);
-    }
-  };
-
-  const handleWithdraw = async () => {
-    if (!withdrawAmount || !connectedAddress) return;
-
-    setIsWithdrawing(true);
-    try {
-      // Convert STT amount to shares for withdrawal
-      const sharesToBurn =
-        totalSupply && actualTotalAssets && actualTotalAssets > 0n
-          ? (parseEther(withdrawAmount) * totalSupply) / actualTotalAssets
-          : parseEther(withdrawAmount);
-
-      await requestWithdrawal({
-        functionName: "requestWithdrawal",
-        args: [sharesToBurn, false], // false = withdraw as WETH
-      });
-      setWithdrawAmount("");
-    } catch (error) {
-      console.error("Withdrawal request failed:", error);
-    } finally {
-      setIsWithdrawing(false);
-    }
-  };
-
   const formatNumber = (value: bigint | undefined) => {
     if (!value) return "0";
     return Number(formatEther(value)).toLocaleString();
   };
 
-  const setMaxAmount = () => {
-    if (activeTab === "stake") {
-      setDepositAmount(formatEther(userETHBalance?.value || 0n));
-    } else {
-      // For withdrawal, show the STT value of user's shares
-      setWithdrawAmount(formatEther(userAssets || 0n));
-    }
+  // Mock data for demonstration
+  const mockData = {
+    totalStakers: 15420,
+    averageAPY: 4.2,
+    protocolRevenue: 234567,
   };
 
+  const stats = [
+    {
+      name: "TVL",
+      value: `${formatNumber(totalAssets)} STT`,
+      icon: CurrencyDollarIcon,
+    },
+    {
+      name: "Stakers",
+      value: mockData.totalStakers.toLocaleString(),
+      icon: UsersIcon,
+    },
+  ];
+
+  const features = [
+    {
+      title: "Liquid Staking",
+      description:
+        "Stake your STT and receive liquid csSTT tokens that can be used in DeFi protocols while earning rewards.",
+      icon: BoltIcon,
+      iconColor: "text-blue-400",
+    },
+    {
+      title: "High APY",
+      description: "Earn competitive yields through our optimized staking strategy and validator selection.",
+      icon: ChartBarIcon,
+      iconColor: "text-purple-400",
+    },
+    {
+      title: "Transparent",
+      description: "All protocol data is publicly available on-chain for complete transparency.",
+      icon: ShieldCheckIcon,
+      iconColor: "text-green-400",
+    },
+  ];
+
   return (
-    <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="container mx-auto px-6 py-8">
-          {/* Protocol Title */}
-          <div className="text-center mb-8">
-            <p className="text-lg text-gray-600">Stake STT and receive liquid csSTT tokens while earning rewards</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+      {/* Hero Section */}
+      <div className="container mx-auto px-6 py-20">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 font-raleway">
+            Stake STT
+            <br />
+            <span className="text-6xl md:text-7xl bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent font-raleway">
+              Stay Liquid
+            </span>
+          </h1>
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8 font-roboto">
+            Covus is a next-generation liquid staking protocol where you can earn staking rewards with Somnia validators
+            while keeping your assets liquid through an ERC-4626 vault with instant withdrawals and a fair queue system.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/stake"
+              className="inline-flex items-center px-8 py-4 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <span>Stake Now</span>
+              <ArrowRightIcon className="h-5 w-5 ml-2" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Stats Section */}
+        <div className="flex items-center justify-center gap-6 mb-20">
+          {stats.map(stat => (
+            <div
+              key={stat.name}
+              className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 min-w-[200px] text-center"
+            >
+              <div className="flex items-center justify-center mb-4">
+                <stat.icon className="h-8 w-8 text-blue-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-1 font-raleway">{stat.value}</h3>
+              <p className="text-[10px] tracking-[1px] text-gray-300 uppercase font-roboto">{stat.name}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="bg-white/5 backdrop-blur-sm py-20">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-white mb-4 font-raleway">Why Choose Covus?</h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto font-roboto">
+              Covus is a next-generation liquid staking protocol that combines security, transparency, and high yields
+              to provide the best staking experience.
+            </p>
           </div>
 
-          {/* Protocol Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-500">Total Staked</h3>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{formatNumber(totalAssets)} STT</p>
-              <p className="text-sm text-gray-500">Across {validatorCount.toLocaleString()} validators</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-500">Network APY</h3>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{mockAPY}%</p>
-              <p className="text-sm text-green-600">⬆️ +{mockAPYChange}% this week</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-500">Protocol Fee</h3>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{protocolFee}%</p>
-              <p className="text-sm text-gray-500">Applied to rewards</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-500">Exchange Rate</h3>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">1 STT = {reverseExchangeRate.toFixed(3)} csSTT</p>
-              <p className="text-sm text-gray-500">Updated every epoch</p>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Stake STT Section */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Stake STT</h2>
-                <p className="text-gray-600 mb-6">
-                  Stake your STT to receive liquid csSTT tokens and start earning rewards
-                </p>
-
-                {/* Tabs */}
-                <div className="flex space-x-1 mb-6 bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setActiveTab("stake")}
-                    className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                      activeTab === "stake" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
-                    }`}
-                  >
-                    Stake
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("unstake")}
-                    className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                      activeTab === "unstake" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
-                    }`}
-                  >
-                    Unstake
-                  </button>
-                </div>
-
-                {/* Input Section */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Amount to {activeTab === "stake" ? "Stake" : "Unstake"}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={activeTab === "stake" ? depositAmount : withdrawAmount}
-                        onChange={e =>
-                          activeTab === "stake" ? setDepositAmount(e.target.value) : setWithdrawAmount(e.target.value)
-                        }
-                        placeholder="0.0"
-                        className="w-full px-4 py-3 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      />
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
-                        <span className="text-gray-500">STT</span>
-                        <button
-                          onClick={setMaxAmount}
-                          className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
-                        >
-                          Max
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Balance:{" "}
-                      {activeTab === "stake"
-                        ? formatNumber(userETHBalance?.value) + " STT"
-                        : formatNumber(userShares) + " csSTT"}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={activeTab === "stake" ? handleDeposit : handleWithdraw}
-                    disabled={
-                      !connectedAddress ||
-                      (activeTab === "stake" ? !depositAmount : !withdrawAmount) ||
-                      (activeTab === "stake" ? isDepositing : isWithdrawing)
-                    }
-                    className="w-full bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
-                  >
-                    {!connectedAddress ? (
-                      <>
-                        <WalletIcon className="h-5 w-5" />
-                        <span>Connect Wallet to {activeTab === "stake" ? "Stake" : "Unstake"}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>
-                          {activeTab === "stake"
-                            ? isDepositing
-                              ? "Staking..."
-                              : "Stake STT"
-                            : isWithdrawing
-                              ? "Unstaking..."
-                              : "Unstake STT"}
-                        </span>
-                        <ChevronRightIcon className="h-5 w-5" />
-                      </>
-                    )}
-                  </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <div
+                key={index}
+                className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-white/10 hover:bg-white/10 transition-colors"
+              >
+                <h3 className="text-2xl font-bold text-white mb-2 font-raleway">{feature.title}</h3>
+                <span className="text-gray-400 text-sm">*********</span>
+                <p className="text-gray-300 mb-8 leading-relaxed font-roboto">{feature.description}</p>
+                <div className="flex justify-end mb-6">
+                  <feature.icon className={`h-24 w-24 ${feature.iconColor}`} />
                 </div>
               </div>
-            </div>
-
-            {/* Portfolio Section */}
-            <div className="space-y-6">
-              {/* Your Portfolio */}
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div className="flex items-center mb-4">
-                  <BoltIcon className="h-5 w-5 text-yellow-500 mr-2" />
-                  <h3 className="text-lg font-semibold text-gray-900">Your Portfolio</h3>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Staked STT</span>
-                    <span className="font-medium">{formatNumber(userAssets)} STT</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">csSTT Balance</span>
-                    <span className="font-medium">{formatNumber(userShares)} csSTT</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Pending Rewards</span>
-                    <span className="font-medium text-green-600">+{pendingRewards.toFixed(3)} STT</span>
-                  </div>
-                  <div className="border-t pt-3">
-                    <div className="flex justify-between">
-                      <span className="font-semibold text-gray-900">Total Value</span>
-                      <span className="font-bold text-gray-900">
-                        {(Number(formatEther(userAssets || 0n)) + pendingRewards).toFixed(1)} STT
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Current APY</span>
-                    <span className="font-medium">{mockAPY}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-teal-400 h-2 rounded-full" style={{ width: "100%" }}></div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Earning rewards since staking began</p>
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-                <div className="text-center py-8 text-gray-500">
-                  <p>No recent activity</p>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
-    </>
+
+      {/* CTA Section */}
+      <div className="container mx-auto px-6 py-20">
+        <div className="text-center">
+          <h2 className="text-4xl font-bold text-white mb-6 font-raleway">Ready to Start Staking?</h2>
+          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto font-roboto">
+            Join thousands of users who are already earning rewards with Covus. Start your staking journey today.
+          </p>
+          <Link
+            href="/stake"
+            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all transform hover:scale-105"
+          >
+            <BoltIcon className="h-5 w-5 mr-2" />
+            <span>Start Staking Now</span>
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 };
 

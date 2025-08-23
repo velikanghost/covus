@@ -2432,7 +2432,7 @@ const deployedContracts = {
   },
   50312: {
     CovusVault: {
-      address: "0x875cAca82A3d62b021161B6861FC12AF99838136",
+      address: "0xc9e09E975c2e266977A303c77E20C7E35e0F809E",
       abi: [
         {
           inputs: [
@@ -2465,6 +2465,11 @@ const deployedContracts = {
             },
           ],
           name: "AddressInsufficientBalance",
+          type: "error",
+        },
+        {
+          inputs: [],
+          name: "ContractPaused",
           type: "error",
         },
         {
@@ -2691,6 +2696,11 @@ const deployedContracts = {
           type: "error",
         },
         {
+          inputs: [],
+          name: "SlippageTooHigh",
+          type: "error",
+        },
+        {
           anonymous: false,
           inputs: [
             {
@@ -2769,6 +2779,19 @@ const deployedContracts = {
           anonymous: false,
           inputs: [
             {
+              indexed: true,
+              internalType: "address",
+              name: "by",
+              type: "address",
+            },
+          ],
+          name: "Paused",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
               indexed: false,
               internalType: "uint256",
               name: "amount",
@@ -2776,6 +2799,19 @@ const deployedContracts = {
             },
           ],
           name: "RewardsReported",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "newSlippage",
+              type: "uint256",
+            },
+          ],
+          name: "SlippageUpdated",
           type: "event",
         },
         {
@@ -2801,6 +2837,19 @@ const deployedContracts = {
             },
           ],
           name: "Transfer",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "by",
+              type: "address",
+            },
+          ],
+          name: "Unpaused",
           type: "event",
         },
         {
@@ -3115,12 +3164,75 @@ const deployedContracts = {
         },
         {
           inputs: [],
+          name: "getCsSTTPrice",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "price",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "timestamp",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "getCsSTTSTTRate",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "rate",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
           name: "head",
           outputs: [
             {
               internalType: "uint256",
               name: "",
               type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "isExchangeRateHealthy",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "shares",
+              type: "uint256",
+            },
+          ],
+          name: "isSlippageAcceptable",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
             },
           ],
           stateMutability: "view",
@@ -3173,6 +3285,19 @@ const deployedContracts = {
             },
           ],
           name: "maxRedeem",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "maxSlippageBps",
           outputs: [
             {
               internalType: "uint256",
@@ -3247,6 +3372,26 @@ const deployedContracts = {
               internalType: "address",
               name: "",
               type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "pause",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "paused",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
             },
           ],
           stateMutability: "view",
@@ -3397,6 +3542,40 @@ const deployedContracts = {
           type: "function",
         },
         {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "shares",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "minAssets",
+              type: "uint256",
+            },
+            {
+              internalType: "address",
+              name: "receiver",
+              type: "address",
+            },
+            {
+              internalType: "address",
+              name: "owner_",
+              type: "address",
+            },
+          ],
+          name: "redeemWithSlippage",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "assets",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
           inputs: [],
           name: "renounceOwnership",
           outputs: [],
@@ -3442,6 +3621,19 @@ const deployedContracts = {
               type: "uint256",
             },
           ],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "newSlippage",
+              type: "uint256",
+            },
+          ],
+          name: "setMaxSlippage",
+          outputs: [],
           stateMutability: "nonpayable",
           type: "function",
         },
@@ -3564,6 +3756,13 @@ const deployedContracts = {
           type: "function",
         },
         {
+          inputs: [],
+          name: "unpause",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
           inputs: [
             {
               internalType: "uint256",
@@ -3595,6 +3794,40 @@ const deployedContracts = {
             },
           ],
           name: "withdraw",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "shares",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "assets",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "maxShares",
+              type: "uint256",
+            },
+            {
+              internalType: "address",
+              name: "receiver",
+              type: "address",
+            },
+            {
+              internalType: "address",
+              name: "owner_",
+              type: "address",
+            },
+          ],
+          name: "withdrawWithSlippage",
           outputs: [
             {
               internalType: "uint256",
@@ -3687,10 +3920,10 @@ const deployedContracts = {
         renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 153988030,
+      deployedOnBlock: 155882069,
     },
     StakingManager: {
-      address: "0x93E04c0Ed3B95580147A92d7ED7d48CBD3598362",
+      address: "0x96B21CAb24B0e106b872aC9A4DC41B5b158Fb0D7",
       abi: [
         {
           inputs: [
@@ -3823,7 +4056,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 153988056,
+      deployedOnBlock: 155882143,
     },
   },
 } as const;

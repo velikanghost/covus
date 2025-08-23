@@ -35,6 +35,12 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     uint256 public head; // next request id to process
     uint256 public tail; // next id to assign
 
+    /// @notice Emergency pause flag
+    bool public paused;
+
+    /// @notice Maximum slippage allowed for redemptions (in basis points, e.g., 500 = 5%)
+    uint256 public maxSlippageBps = 500; // 5% default
+
     event WithdrawalRequested(
         uint256 indexed id,
         address indexed owner,
@@ -44,8 +50,18 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     );
     event WithdrawalProcessed(uint256 indexed id, address indexed owner, uint256 assets, bool toSTT);
     event RewardsReported(uint256 amount);
+    event Paused(address indexed by);
+    event Unpaused(address indexed by);
+    event SlippageUpdated(uint256 newSlippage);
 
     error InsufficientLiquidity();
+    error SlippageTooHigh();
+    error ContractPaused();
+
+    modifier whenNotPaused() {
+        if (paused) revert ContractPaused();
+        _;
+    }
 
     constructor(
         IWETH _weth
@@ -56,7 +72,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Convenience: deposit native STT; it is wrapped into WSTT and deposited.
-    function depositSTT(address receiver) external payable returns (uint256 shares) {
+    function depositSTT(address receiver) external payable whenNotPaused returns (uint256 shares) {
         require(msg.value > 0, "ZERO_STT");
 
         uint256 assetsBefore = totalAssets(); // Get balance BEFORE deposit
@@ -74,7 +90,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
 
     /// @notice Owner can report rewards by transferring WSTT in and emitting an event.
     /// Simply send WSTT to this contract; totalAssets() will reflect it.
-    function reportRewards(uint256 amount) external onlyOwner {
+    function reportRewards(uint256 amount) external onlyOwner whenNotPaused {
         // Optional helper: pull WSTT from owner (needs approve first)
         if (amount > 0) {
             IERC20(address(asset())).transferFrom(msg.sender, address(this), amount);
@@ -98,7 +114,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
         uint256 assets,
         address receiver,
         address owner_
-    ) public override nonReentrant returns (uint256 shares) {
+    ) public override whenNotPaused nonReentrant returns (uint256 shares) {
         // available free liquidity excludes queuedAssets
         uint256 free = IERC20(address(asset())).balanceOf(address(this)) - queuedAssets;
         if (assets > free) revert InsufficientLiquidity();
@@ -110,7 +126,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
         uint256 shares,
         address receiver,
         address owner_
-    ) public override nonReentrant returns (uint256 assets) {
+    ) public override whenNotPaused nonReentrant returns (uint256 assets) {
         assets = previewRedeem(shares);
         uint256 free = IERC20(address(asset())).balanceOf(address(this)) - queuedAssets;
         if (assets > free) revert InsufficientLiquidity();
@@ -124,7 +140,10 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     /// @notice Request a queued withdrawal when instant liquidity is insufficient (or by choice).
     /// Burns shares immediately and reserves assets from accounting via `queuedAssets`.
     /// The request will be paid out later in FIFO order by `processQueue`.
-    function requestWithdrawal(uint256 shares, bool toSTT) external nonReentrant returns (uint256 id, uint256 assets) {
+    function requestWithdrawal(
+        uint256 shares,
+        bool toSTT
+    ) external whenNotPaused nonReentrant returns (uint256 id, uint256 assets) {
         require(shares > 0, "ZERO_SHARES");
         assets = previewRedeem(shares);
         require(assets > 0, "ZERO_ASSETS");
@@ -141,7 +160,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     }
 
     /// @notice Process up to `maxRequests` from the FIFO queue, paying out if there is liquidity.
-    function processQueue(uint256 maxRequests) public nonReentrant {
+    function processQueue(uint256 maxRequests) public whenNotPaused nonReentrant {
         uint256 processed;
         IWETH _weth = IWETH(address(asset()));
         while (processed < maxRequests && head < tail) {
@@ -186,22 +205,150 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     }
 
     /*//////////////////////////////////////////////////////////////
+                        EXCHANGE RATE & PRICING
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Get current csSTT/STT exchange rate
+    /// @return rate Exchange rate (1e18 = 1:1 ratio)
+    function getCsSTTSTTRate() external view returns (uint256 rate) {
+        if (totalSupply() == 0) {
+            return 1e18; // 1:1 ratio when no shares exist
+        }
+
+        // Exchange rate = totalAssets / totalSupply
+        // For liquid staking, this should be close to 1:1
+        return (totalAssets() * 1e18) / totalSupply();
+    }
+
+    /// @notice Get csSTT price for external integrations
+    /// @return price csSTT price in STT (should be ~1:1)
+    /// @return timestamp Current block timestamp
+    function getCsSTTPrice() external view returns (uint256 price, uint256 timestamp) {
+        if (totalSupply() == 0) {
+            return (1e18, block.timestamp); // 1:1 ratio when no shares
+        }
+
+        // Calculate price from vault's exchange rate
+        price = (totalAssets() * 1e18) / totalSupply();
+        timestamp = block.timestamp;
+
+        return (price, timestamp);
+    }
+
+    /// @notice Check if exchange rate is healthy (within 5% of 1:1)
+    /// @return True if rate is healthy
+    function isExchangeRateHealthy() external view returns (bool) {
+        uint256 rate = this.getCsSTTSTTRate();
+        uint256 expectedRate = 1e18; // 1:1 ratio
+
+        uint256 deviation = rate > expectedRate ? rate - expectedRate : expectedRate - rate;
+        uint256 deviationPercent = (deviation * 10000) / expectedRate;
+
+        return deviationPercent <= 500; // 5% tolerance
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        SLIPPAGE PROTECTION
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Redeem with slippage protection
+    /// @param shares Amount of shares to redeem
+    /// @param minAssets Minimum assets to receive
+    /// @param receiver Address to receive assets
+    /// @param owner_ Owner of shares
+    function redeemWithSlippage(
+        uint256 shares,
+        uint256 minAssets,
+        address receiver,
+        address owner_
+    ) external whenNotPaused nonReentrant returns (uint256 assets) {
+        assets = previewRedeem(shares);
+
+        // Check slippage
+        if (assets < minAssets) revert SlippageTooHigh();
+
+        uint256 free = IERC20(address(asset())).balanceOf(address(this)) - queuedAssets;
+        if (assets > free) revert InsufficientLiquidity();
+
+        assets = super.redeem(shares, receiver, owner_);
+    }
+
+    /// @notice Withdraw with slippage protection
+    /// @param assets Amount of assets to withdraw
+    /// @param maxShares Maximum shares to burn
+    /// @param receiver Address to receive assets
+    /// @param owner_ Owner of shares
+    function withdrawWithSlippage(
+        uint256 assets,
+        uint256 maxShares,
+        address receiver,
+        address owner_
+    ) external whenNotPaused nonReentrant returns (uint256 shares) {
+        shares = previewWithdraw(assets);
+
+        // Check slippage
+        if (shares > maxShares) revert SlippageTooHigh();
+
+        uint256 free = IERC20(address(asset())).balanceOf(address(this)) - queuedAssets;
+        if (assets > free) revert InsufficientLiquidity();
+
+        shares = super.withdraw(assets, receiver, owner_);
+    }
+
+    /// @notice Check if redemption would exceed slippage limits
+    /// @param shares Amount of shares to redeem
+    /// @return True if slippage is acceptable
+    function isSlippageAcceptable(uint256 shares) external view returns (bool) {
+        uint256 expectedAssets = shares; // 1:1 ratio
+        uint256 actualAssets = previewRedeem(shares);
+
+        if (actualAssets >= expectedAssets) return true;
+
+        uint256 slippage = ((expectedAssets - actualAssets) * 10000) / expectedAssets;
+        return slippage <= maxSlippageBps;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        EMERGENCY CONTROLS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Pause all operations (owner only)
+    function pause() external onlyOwner {
+        paused = true;
+        emit Paused(msg.sender);
+    }
+
+    /// @notice Unpause operations (owner only)
+    function unpause() external onlyOwner {
+        paused = false;
+        emit Unpaused(msg.sender);
+    }
+
+    /// @notice Update maximum slippage (owner only)
+    /// @param newSlippage New slippage in basis points
+    function setMaxSlippage(uint256 newSlippage) external onlyOwner {
+        require(newSlippage <= 1000, "Slippage too high"); // Max 10%
+        maxSlippageBps = newSlippage;
+        emit SlippageUpdated(newSlippage);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                         OWNER / ADMIN UTILITIES (DEMO)
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Owner can unwrap some WSTT to STT to build an STT buffer for queued payouts to STT.
-    function unwrapToSTT(uint256 amount) external onlyOwner {
+    function unwrapToSTT(uint256 amount) external onlyOwner whenNotPaused {
         IWETH(address(asset())).withdraw(amount);
     }
 
     /// @notice Owner can wrap any stray STT back to WSTT (e.g., from direct transfers).
-    function wrapSTT() external onlyOwner {
+    function wrapSTT() external onlyOwner whenNotPaused {
         uint256 bal = address(this).balance;
         if (bal > 0) IWETH(address(asset())).deposit{ value: bal }();
     }
 
     /// @notice Owner can approve WSTT spending for staking operations.
-    function approveWSTT(address spender, uint256 amount) external onlyOwner {
+    function approveWSTT(address spender, uint256 amount) external onlyOwner whenNotPaused {
         IERC20(address(asset())).approve(spender, amount);
     }
 
