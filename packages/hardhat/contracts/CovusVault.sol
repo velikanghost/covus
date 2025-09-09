@@ -352,9 +352,5 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
         IERC20(address(asset())).approve(spender, amount);
     }
 
-    receive() external payable {
-        if (msg.value > 0) {
-            IWETH(address(asset())).deposit{ value: msg.value }();
-        }
-    }
+    receive() external payable {}
 }
