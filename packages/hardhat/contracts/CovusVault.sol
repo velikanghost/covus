@@ -109,28 +109,60 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
         return bal - queuedAssets;
     }
 
-    /// @dev Instant withdraw only if enough free liquidity.
-    function withdraw(
+    /// @notice Withdraw with slippage protection, returns STT
+    /// @param assets Amount of STT to withdraw
+    /// @param maxShares Maximum shares to burn
+    /// @param receiver Address to receive STT
+    /// @param owner_ Owner of shares
+    function withdrawSTT(
         uint256 assets,
+        uint256 maxShares,
         address receiver,
         address owner_
-    ) public override whenNotPaused nonReentrant returns (uint256 shares) {
-        // available free liquidity excludes queuedAssets
+    ) public whenNotPaused nonReentrant returns (uint256 shares) {
+        shares = previewWithdraw(assets);
+
+        // Check slippage
+        if (shares > maxShares) revert SlippageTooHigh();
+
         uint256 free = IERC20(address(asset())).balanceOf(address(this)) - queuedAssets;
         if (assets > free) revert InsufficientLiquidity();
-        shares = super.withdraw(assets, receiver, owner_);
+
+        // First get WSTT via standard withdraw
+        shares = super.withdraw(assets, address(this), owner_);
+
+        // Then unwrap WSTT to STT and send to receiver
+        IWETH(address(asset())).withdraw(assets);
+        (bool ok, ) = receiver.call{ value: assets }("");
+        require(ok, "STT_SEND_FAIL");
     }
 
-    /// @dev Instant redeem only if enough free liquidity.
-    function redeem(
+    /// @notice Redeem shares with slippage protection, returns STT
+    /// @param shares Amount of shares to redeem
+    /// @param minAssets Minimum STT to receive
+    /// @param receiver Address to receive STT
+    /// @param owner_ Owner of shares
+    function redeemSTT(
         uint256 shares,
+        uint256 minAssets,
         address receiver,
         address owner_
-    ) public override whenNotPaused nonReentrant returns (uint256 assets) {
+    ) public whenNotPaused nonReentrant returns (uint256 assets) {
         assets = previewRedeem(shares);
+
+        // Check slippage
+        if (assets < minAssets) revert SlippageTooHigh();
+
         uint256 free = IERC20(address(asset())).balanceOf(address(this)) - queuedAssets;
         if (assets > free) revert InsufficientLiquidity();
-        assets = super.redeem(shares, receiver, owner_);
+
+        // First get WSTT via standard redeem
+        assets = super.redeem(shares, address(this), owner_);
+
+        // Then unwrap WSTT to STT and send to receiver
+        IWETH(address(asset())).withdraw(assets);
+        (bool ok, ) = receiver.call{ value: assets }("");
+        require(ok, "STT_SEND_FAIL");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -141,8 +173,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     /// Burns shares immediately and reserves assets from accounting via `queuedAssets`.
     /// The request will be paid out later in FIFO order by `processQueue`.
     function requestWithdrawal(
-        uint256 shares,
-        bool toSTT
+        uint256 shares
     ) external whenNotPaused nonReentrant returns (uint256 id, uint256 assets) {
         require(shares > 0, "ZERO_SHARES");
         assets = previewRedeem(shares);
@@ -155,8 +186,8 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
         queuedAssets += assets;
 
         id = tail++;
-        withdrawals[id] = Withdrawal({ owner: msg.sender, assets: assets, toSTT: toSTT });
-        emit WithdrawalRequested(id, msg.sender, assets, shares, toSTT);
+        withdrawals[id] = Withdrawal({ owner: msg.sender, assets: assets, toSTT: true });
+        emit WithdrawalRequested(id, msg.sender, assets, shares, true);
     }
 
     /// @notice Process up to `maxRequests` from the FIFO queue, paying out if there is liquidity.
@@ -177,15 +208,10 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
             // Unreserve first to keep invariants tight
             queuedAssets -= w.assets;
 
-            if (w.toSTT) {
-                // unwrap WETH -> ETH and send
-                _weth.withdraw(w.assets);
-                (bool ok, ) = w.owner.call{ value: w.assets }("");
-                require(ok, "ETH_SEND_FAIL");
-            } else {
-                // send WETH
-                require(IERC20(address(_weth)).transfer(w.owner, w.assets), "WETH_SEND_FAIL");
-            }
+            // Always unwrap WSTT to STT and send
+            _weth.withdraw(w.assets);
+            (bool ok, ) = w.owner.call{ value: w.assets }("");
+            require(ok, "STT_SEND_FAIL");
 
             emit WithdrawalProcessed(head, w.owner, w.assets, w.toSTT);
             delete withdrawals[head];
@@ -250,50 +276,6 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     /*//////////////////////////////////////////////////////////////
                         SLIPPAGE PROTECTION
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Redeem with slippage protection
-    /// @param shares Amount of shares to redeem
-    /// @param minAssets Minimum assets to receive
-    /// @param receiver Address to receive assets
-    /// @param owner_ Owner of shares
-    function redeemWithSlippage(
-        uint256 shares,
-        uint256 minAssets,
-        address receiver,
-        address owner_
-    ) external whenNotPaused nonReentrant returns (uint256 assets) {
-        assets = previewRedeem(shares);
-
-        // Check slippage
-        if (assets < minAssets) revert SlippageTooHigh();
-
-        uint256 free = IERC20(address(asset())).balanceOf(address(this)) - queuedAssets;
-        if (assets > free) revert InsufficientLiquidity();
-
-        assets = super.redeem(shares, receiver, owner_);
-    }
-
-    /// @notice Withdraw with slippage protection
-    /// @param assets Amount of assets to withdraw
-    /// @param maxShares Maximum shares to burn
-    /// @param receiver Address to receive assets
-    /// @param owner_ Owner of shares
-    function withdrawWithSlippage(
-        uint256 assets,
-        uint256 maxShares,
-        address receiver,
-        address owner_
-    ) external whenNotPaused nonReentrant returns (uint256 shares) {
-        shares = previewWithdraw(assets);
-
-        // Check slippage
-        if (shares > maxShares) revert SlippageTooHigh();
-
-        uint256 free = IERC20(address(asset())).balanceOf(address(this)) - queuedAssets;
-        if (assets > free) revert InsufficientLiquidity();
-
-        shares = super.withdraw(assets, receiver, owner_);
-    }
 
     /// @notice Check if redemption would exceed slippage limits
     /// @param shares Amount of shares to redeem

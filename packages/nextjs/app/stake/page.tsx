@@ -55,8 +55,8 @@ const StakePage: NextPage = () => {
 
   // Write contract functions
   const { writeContractAsync: depositETH } = useScaffoldWriteContract("CovusVault");
+  const { writeContractAsync: redeem } = useScaffoldWriteContract("CovusVault");
   const { writeContractAsync: requestWithdrawal } = useScaffoldWriteContract("CovusVault");
-  const { writeContractAsync: instantRedeem } = useScaffoldWriteContract("CovusVault");
 
   // Calculate actual total assets (including queued assets) for display
   const actualTotalAssets = totalAssets && queuedAssets ? totalAssets + queuedAssets : totalAssets;
@@ -107,18 +107,20 @@ const StakePage: NextPage = () => {
 
       const withdrawAmountWei = parseEther(withdrawAmount);
 
-      // Check if there's enough free liquidity for instant withdrawal
+      // Add 5% slippage tolerance
+      const minAssets = ((withdrawAmountWei * 95n) / 100n).toString();
+
       if (freeLiquidity && freeLiquidity >= withdrawAmountWei) {
-        // Use instant redemption when there's enough liquidity
-        await instantRedeem({
-          functionName: "redeem",
-          args: [sharesToBurn, connectedAddress, connectedAddress],
+        // Use instant redemption with slippage protection
+        await redeem({
+          functionName: "redeemSTT",
+          args: [sharesToBurn, BigInt(minAssets), connectedAddress, connectedAddress],
         });
       } else {
         // Use queue system when there's insufficient liquidity
         await requestWithdrawal({
           functionName: "requestWithdrawal",
-          args: [sharesToBurn, true], // true = withdraw as STT
+          args: [sharesToBurn], // true = always return STT
         });
       }
       setWithdrawAmount("");

@@ -40,8 +40,8 @@ export const StakingCard = ({ type, userBalance, onSuccess }: StakingCardProps) 
   });
 
   const { writeContractAsync: depositETH } = useScaffoldWriteContract("CovusVault");
+  const { writeContractAsync: redeem } = useScaffoldWriteContract("CovusVault");
   const { writeContractAsync: requestWithdrawal } = useScaffoldWriteContract("CovusVault");
-  const { writeContractAsync: instantRedeem } = useScaffoldWriteContract("CovusVault");
 
   const isStake = type === "stake";
   const icon = isStake ? ArrowUpIcon : ArrowDownIcon;
@@ -56,12 +56,12 @@ export const StakingCard = ({ type, userBalance, onSuccess }: StakingCardProps) 
   };
 
   const buttonText = isStake
-    ? "Stake ETH"
+    ? "Stake STT"
     : amount
       ? getWithdrawalType() === "instant"
-        ? "Instant Withdraw ETH"
-        : "Queue Withdraw ETH"
-      : "Withdraw ETH";
+        ? "Instant Withdraw STT"
+        : "Queue Withdraw STT"
+      : "Withdraw STT";
   const buttonColor = isStake ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700";
 
   const handleAction = async () => {
@@ -78,25 +78,27 @@ export const StakingCard = ({ type, userBalance, onSuccess }: StakingCardProps) 
       } else {
         const withdrawAmountWei = parseEther(amount);
 
-        // Check if there's enough free liquidity for instant withdrawal
-        if (freeLiquidity && freeLiquidity >= withdrawAmountWei) {
-          // Calculate shares to burn for instant redemption
-          const actualTotalAssets = totalAssets && queuedAssets ? totalAssets + queuedAssets : totalAssets;
-          const sharesToBurn =
-            totalSupply && actualTotalAssets && actualTotalAssets > 0n
-              ? (withdrawAmountWei * totalSupply) / actualTotalAssets
-              : withdrawAmountWei;
+        // Calculate shares needed for withdrawal
+        const actualTotalAssets = totalAssets && queuedAssets ? totalAssets + queuedAssets : totalAssets;
+        const sharesToBurn =
+          totalSupply && actualTotalAssets && actualTotalAssets > 0n
+            ? (withdrawAmountWei * totalSupply) / actualTotalAssets
+            : withdrawAmountWei;
 
-          // Use instant redemption when there's enough liquidity
-          await instantRedeem({
-            functionName: "redeem",
-            args: [sharesToBurn, connectedAddress, connectedAddress],
+        // Add 5% slippage tolerance
+        const minAssets = ((withdrawAmountWei * 95n) / 100n).toString();
+
+        if (freeLiquidity && freeLiquidity >= withdrawAmountWei) {
+          // Use instant redemption with slippage protection
+          await redeem({
+            functionName: "redeemSTT",
+            args: [sharesToBurn, BigInt(minAssets), connectedAddress, connectedAddress],
           });
         } else {
           // Use queue system when there's insufficient liquidity
           await requestWithdrawal({
             functionName: "requestWithdrawal",
-            args: [parseEther(amount), true], // true = withdraw as STT
+            args: [sharesToBurn], // true = always return STT
           });
         }
       }

@@ -1625,7 +1625,7 @@ const deployedContracts = {
   },
   50312: {
     CovusVault: {
-      address: "0x08DAda74f64c54bC68a6C27e284aD2a1C0aA6fe8",
+      address: "0x4A8C94962Ca9f2eE9312221093be6d5Ef7a334Dc",
       abi: [
         {
           inputs: [
@@ -2719,7 +2719,7 @@ const deployedContracts = {
             },
             {
               internalType: "address",
-              name: "owner_",
+              name: "owner",
               type: "address",
             },
           ],
@@ -2727,7 +2727,7 @@ const deployedContracts = {
           outputs: [
             {
               internalType: "uint256",
-              name: "assets",
+              name: "",
               type: "uint256",
             },
           ],
@@ -2757,7 +2757,7 @@ const deployedContracts = {
               type: "address",
             },
           ],
-          name: "redeemWithSlippage",
+          name: "redeemSTT",
           outputs: [
             {
               internalType: "uint256",
@@ -2794,11 +2794,6 @@ const deployedContracts = {
               internalType: "uint256",
               name: "shares",
               type: "uint256",
-            },
-            {
-              internalType: "bool",
-              name: "toSTT",
-              type: "bool",
             },
           ],
           name: "requestWithdrawal",
@@ -2982,7 +2977,7 @@ const deployedContracts = {
             },
             {
               internalType: "address",
-              name: "owner_",
+              name: "owner",
               type: "address",
             },
           ],
@@ -2990,7 +2985,7 @@ const deployedContracts = {
           outputs: [
             {
               internalType: "uint256",
-              name: "shares",
+              name: "",
               type: "uint256",
             },
           ],
@@ -3020,7 +3015,7 @@ const deployedContracts = {
               type: "address",
             },
           ],
-          name: "withdrawWithSlippage",
+          name: "withdrawSTT",
           outputs: [
             {
               internalType: "uint256",
@@ -3102,10 +3097,10 @@ const deployedContracts = {
         renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 171754759,
+      deployedOnBlock: 171866567,
     },
     StakingManager: {
-      address: "0xeC4380Fc01B6Ff92b7e63089f16151Fa49266e56",
+      address: "0xfB828C72F2002D58B4a754D2EdaebEDB0Fb6baCa",
       abi: [
         {
           inputs: [
@@ -3238,7 +3233,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 171754785,
+      deployedOnBlock: 171866593,
     },
   },
 } as const;
