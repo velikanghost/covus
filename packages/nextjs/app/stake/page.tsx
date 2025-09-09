@@ -43,6 +43,11 @@ const StakePage: NextPage = () => {
     functionName: "queuedAssets",
   });
 
+  const { data: freeLiquidity } = useScaffoldReadContract({
+    contractName: "CovusVault",
+    functionName: "freeLiquidity",
+  });
+
   // User balances
   const { data: userETHBalance } = useBalance({
     address: connectedAddress,
@@ -51,6 +56,7 @@ const StakePage: NextPage = () => {
   // Write contract functions
   const { writeContractAsync: depositETH } = useScaffoldWriteContract("CovusVault");
   const { writeContractAsync: requestWithdrawal } = useScaffoldWriteContract("CovusVault");
+  const { writeContractAsync: instantRedeem } = useScaffoldWriteContract("CovusVault");
 
   // Calculate actual total assets (including queued assets) for display
   const actualTotalAssets = totalAssets && queuedAssets ? totalAssets + queuedAssets : totalAssets;
@@ -62,6 +68,13 @@ const StakePage: NextPage = () => {
   // Calculate APY (mock calculation for demo)
   const mockAPY = 4.2;
   const pendingRewards = userAssets ? Number(formatEther(userAssets)) * 0.01 : 0; // 1% of staked amount as pending rewards
+
+  // Determine withdrawal type based on liquidity
+  const getWithdrawalType = () => {
+    if (!withdrawAmount || !freeLiquidity) return "withdrawal";
+    const withdrawAmountWei = parseEther(withdrawAmount);
+    return freeLiquidity >= withdrawAmountWei ? "instant" : "queued";
+  };
 
   const handleDeposit = async () => {
     if (!depositAmount || !connectedAddress) return;
@@ -92,13 +105,25 @@ const StakePage: NextPage = () => {
           ? (parseEther(withdrawAmount) * totalSupply) / actualTotalAssets
           : parseEther(withdrawAmount);
 
-      await requestWithdrawal({
-        functionName: "requestWithdrawal",
-        args: [sharesToBurn, false], // false = withdraw as WETH
-      });
+      const withdrawAmountWei = parseEther(withdrawAmount);
+
+      // Check if there's enough free liquidity for instant withdrawal
+      if (freeLiquidity && freeLiquidity >= withdrawAmountWei) {
+        // Use instant redemption when there's enough liquidity
+        await instantRedeem({
+          functionName: "redeem",
+          args: [sharesToBurn, connectedAddress, connectedAddress],
+        });
+      } else {
+        // Use queue system when there's insufficient liquidity
+        await requestWithdrawal({
+          functionName: "requestWithdrawal",
+          args: [sharesToBurn, true], // true = withdraw as STT
+        });
+      }
       setWithdrawAmount("");
     } catch (error) {
-      console.error("Withdrawal request failed:", error);
+      console.error("Withdrawal failed:", error);
     } finally {
       setIsWithdrawing(false);
     }
@@ -214,7 +239,11 @@ const StakePage: NextPage = () => {
                             : "Stake STT"
                           : isWithdrawing
                             ? "Unstaking..."
-                            : "Unstake STT"}
+                            : activeTab === "unstake" && withdrawAmount
+                              ? getWithdrawalType() === "instant"
+                                ? "Instant Unstake STT"
+                                : "Queue Unstake STT"
+                              : "Unstake STT"}
                       </span>
                       <ChevronRightIcon className="h-5 w-5" />
                     </>
