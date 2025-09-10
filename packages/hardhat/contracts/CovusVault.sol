@@ -2,15 +2,11 @@
 pragma solidity ^0.8.24;
 
 /**
- * Minimal ERC-4626 liquid staking-style vault with a FIFO withdrawal queue.
+ * Minimal ERC-4626 liquid staking-style vault.
  * - Underlying asset: WSTT (wraps/unlocks STT for user convenience)
  * - Shares token: ERC20 (this contract is the shares token via OZ ERC4626/ ERC20 inheritance)
  * - Instant redemptions via standard ERC-4626 functions when there is sufficient on-hand liquidity
- * - Queued withdrawals when there isn't enough liquidity (typical for liquid staking protocols)
- *
- * IMPORTANT: This is a prototype for learning. Not production ready.
- * Before any real deployment: audits, invariants, queue griefing analysis, oracle proofs for rewards,
- * validator infra, rate limits, governance/pausing, slashing insurance, etc.
+ * - Queued withdrawals when there isn't enough liquidity
  */
 
 import { IERC20, ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -22,7 +18,7 @@ import { IWETH } from "./interfaces/IWETH.sol";
 
 contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     /// @notice Amount of underlying assets that are reserved to satisfy queued withdrawals.
-    uint256 public queuedAssets; // decreases free liquidity and totalAssets()
+    uint256 public queuedAssets;
 
     /// @notice FIFO withdrawal queue
     struct Withdrawal {
@@ -75,23 +71,21 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     function depositSTT(address receiver) external payable whenNotPaused returns (uint256 shares) {
         require(msg.value > 0, "ZERO_STT");
 
-        uint256 assetsBefore = totalAssets(); // Get balance BEFORE deposit
+        uint256 assetsBefore = totalAssets();
 
         IWETH(address(asset())).deposit{ value: msg.value }();
 
         if (totalSupply() == 0) {
             shares = msg.value;
         } else {
-            shares = (msg.value * totalSupply()) / assetsBefore; // Use balance BEFORE
+            shares = (msg.value * totalSupply()) / assetsBefore;
         }
 
         _mint(receiver, shares);
     }
 
     /// @notice Owner can report rewards by transferring WSTT in and emitting an event.
-    /// Simply send WSTT to this contract; totalAssets() will reflect it.
     function reportRewards(uint256 amount) external onlyOwner whenNotPaused {
-        // Optional helper: pull WSTT from owner (needs approve first)
         if (amount > 0) {
             IERC20(address(asset())).transferFrom(msg.sender, address(this), amount);
             emit RewardsReported(amount);
@@ -105,7 +99,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     /// @dev Exclude assets reserved for the withdrawal queue from the vault's accounting.
     function totalAssets() public view override returns (uint256) {
         uint256 bal = IERC20(address(asset())).balanceOf(address(this));
-        if (bal < queuedAssets) return 0; // should not happen, but be safe
+        if (bal < queuedAssets) return 0;
         return bal - queuedAssets;
     }
 
@@ -179,10 +173,8 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
         assets = previewRedeem(shares);
         require(assets > 0, "ZERO_ASSETS");
 
-        // Burn shares now to prevent dilution / double counting
         _burn(msg.sender, shares);
 
-        // Reserve assets from vault accounting so exchangeRate doesn't drift unfairly
         queuedAssets += assets;
 
         id = tail++;
@@ -197,18 +189,15 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
         while (processed < maxRequests && head < tail) {
             Withdrawal storage w = withdrawals[head];
             if (w.owner == address(0)) {
-                // already processed
                 head++;
                 continue;
             }
 
             uint256 free = IERC20(address(_weth)).balanceOf(address(this));
-            if (free < w.assets) break; // not enough liquidity yet
+            if (free < w.assets) break;
 
-            // Unreserve first to keep invariants tight
             queuedAssets -= w.assets;
 
-            // Always unwrap WSTT to STT and send
             _weth.withdraw(w.assets);
             (bool ok, ) = w.owner.call{ value: w.assets }("");
             require(ok, "STT_SEND_FAIL");
@@ -238,11 +227,9 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     /// @return rate Exchange rate (1e18 = 1:1 ratio)
     function getCsSTTSTTRate() external view returns (uint256 rate) {
         if (totalSupply() == 0) {
-            return 1e18; // 1:1 ratio when no shares exist
+            return 1e18;
         }
 
-        // Exchange rate = totalAssets / totalSupply
-        // For liquid staking, this should be close to 1:1
         return (totalAssets() * 1e18) / totalSupply();
     }
 
@@ -251,10 +238,9 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     /// @return timestamp Current block timestamp
     function getCsSTTPrice() external view returns (uint256 price, uint256 timestamp) {
         if (totalSupply() == 0) {
-            return (1e18, block.timestamp); // 1:1 ratio when no shares
+            return (1e18, block.timestamp);
         }
 
-        // Calculate price from vault's exchange rate
         price = (totalAssets() * 1e18) / totalSupply();
         timestamp = block.timestamp;
 
@@ -265,12 +251,12 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     /// @return True if rate is healthy
     function isExchangeRateHealthy() external view returns (bool) {
         uint256 rate = this.getCsSTTSTTRate();
-        uint256 expectedRate = 1e18; // 1:1 ratio
+        uint256 expectedRate = 1e18;
 
         uint256 deviation = rate > expectedRate ? rate - expectedRate : expectedRate - rate;
         uint256 deviationPercent = (deviation * 10000) / expectedRate;
 
-        return deviationPercent <= 500; // 5% tolerance
+        return deviationPercent <= 500;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -281,7 +267,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     /// @param shares Amount of shares to redeem
     /// @return True if slippage is acceptable
     function isSlippageAcceptable(uint256 shares) external view returns (bool) {
-        uint256 expectedAssets = shares; // 1:1 ratio
+        uint256 expectedAssets = shares;
         uint256 actualAssets = previewRedeem(shares);
 
         if (actualAssets >= expectedAssets) return true;
@@ -309,7 +295,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
     /// @notice Update maximum slippage (owner only)
     /// @param newSlippage New slippage in basis points
     function setMaxSlippage(uint256 newSlippage) external onlyOwner {
-        require(newSlippage <= 1000, "Slippage too high"); // Max 10%
+        require(newSlippage <= 1000, "Slippage too high");
         maxSlippageBps = newSlippage;
         emit SlippageUpdated(newSlippage);
     }
@@ -323,7 +309,7 @@ contract CovusVault is ERC4626, Ownable, ReentrancyGuard {
         IWETH(address(asset())).withdraw(amount);
     }
 
-    /// @notice Owner can wrap any stray STT back to WSTT (e.g., from direct transfers).
+    /// @notice Owner can wrap any stray STT back to WSTT.
     function wrapSTT() external onlyOwner whenNotPaused {
         uint256 bal = address(this).balance;
         if (bal > 0) IWETH(address(asset())).deposit{ value: bal }();

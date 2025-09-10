@@ -25,10 +25,8 @@ contract StakingManager {
 
     /**
      * @notice Pull WSTT from vault and simulate staking it in validators.
-     *         In production this would trigger ETH2 deposits via depositContract.
      */
     function stake(uint256 amount) external {
-        // Pull from vault
         require(IERC20(address(WETH)).transferFrom(address(vault), address(this), amount), "pull failed");
 
         emit Staked(msg.sender, amount);
@@ -42,7 +40,6 @@ contract StakingManager {
     function sendRewards(uint256 amount) external {
         // For testing, we need to have STT to send
         require(address(this).balance >= amount, "insufficient STT balance");
-        // Send STT directly to vault's receive() to trigger wrap & accounting
         (bool ok, ) = payable(address(vault)).call{ value: amount }("");
         require(ok, "send failed");
         emit RewardsSent(address(vault), amount);

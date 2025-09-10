@@ -21,8 +21,6 @@ const deployContracts: DeployFunction = async function (hre: HardhatRuntimeEnvir
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
 
-  console.log("Starting deployment...");
-
   // Deploy CovusVault vault
   console.log("Deploying CovusVault...");
   await deploy("CovusVault", {
@@ -43,7 +41,7 @@ const deployContracts: DeployFunction = async function (hre: HardhatRuntimeEnvir
   });
   const stakingManager = await hre.ethers.getContract<Contract>("StakingManager", deployer);
 
-  // Only set up contract state on local network
+  // set up contract state
   if (hre.network.name == "localhost" || hre.network.name == "somniaTestnet") {
     console.log("Setting up initial configuration for localhost...");
 
