@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { formatEther, parseEther } from "viem";
 import { useAccount } from "wagmi";
 import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/24/outline";
-import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
 interface StakingCardProps {
   type: "stake" | "withdraw";
@@ -18,14 +18,50 @@ export const StakingCard = ({ type, userBalance, onSuccess }: StakingCardProps) 
   const [amount, setAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Read contract data for liquidity check
+  const { data: freeLiquidity } = useScaffoldReadContract({
+    contractName: "CovusVault",
+    functionName: "freeLiquidity",
+  });
+
+  const { data: totalSupply } = useScaffoldReadContract({
+    contractName: "CovusVault",
+    functionName: "totalSupply",
+  });
+
+  const { data: totalAssets } = useScaffoldReadContract({
+    contractName: "CovusVault",
+    functionName: "totalAssets",
+  });
+
+  const { data: queuedAssets } = useScaffoldReadContract({
+    contractName: "CovusVault",
+    functionName: "queuedAssets",
+  });
+
   const { writeContractAsync: depositETH } = useScaffoldWriteContract("CovusVault");
+  const { writeContractAsync: redeem } = useScaffoldWriteContract("CovusVault");
   const { writeContractAsync: requestWithdrawal } = useScaffoldWriteContract("CovusVault");
 
   const isStake = type === "stake";
   const icon = isStake ? ArrowUpIcon : ArrowDownIcon;
   const title = isStake ? "Stake ETH" : "Withdraw ETH";
-  const description = isStake ? "Deposit ETH to receive liquid csSTT tokens" : "Request withdrawal of your staked ETH";
-  const buttonText = isStake ? "Stake ETH" : "Request Withdrawal";
+  const description = isStake ? "Deposit ETH to receive liquid csSTT tokens" : "Withdraw your staked ETH";
+
+  // Calculate if withdrawal can be instant
+  const getWithdrawalType = () => {
+    if (isStake || !amount || !freeLiquidity) return "stake";
+    const withdrawAmountWei = parseEther(amount);
+    return freeLiquidity >= withdrawAmountWei ? "instant" : "queued";
+  };
+
+  const buttonText = isStake
+    ? "Stake STT"
+    : amount
+      ? getWithdrawalType() === "instant"
+        ? "Instant Withdraw STT"
+        : "Queue Withdraw STT"
+      : "Withdraw STT";
   const buttonColor = isStake ? "bg-blue-600 hover:bg-blue-700" : "bg-red-600 hover:bg-red-700";
 
   const handleAction = async () => {
@@ -40,10 +76,31 @@ export const StakingCard = ({ type, userBalance, onSuccess }: StakingCardProps) 
           value: parseEther(amount),
         });
       } else {
-        await requestWithdrawal({
-          functionName: "requestWithdrawal",
-          args: [parseEther(amount), false], // false = withdraw as WETH
-        });
+        const withdrawAmountWei = parseEther(amount);
+
+        // Calculate shares needed for withdrawal
+        const actualTotalAssets = totalAssets && queuedAssets ? totalAssets + queuedAssets : totalAssets;
+        const sharesToBurn =
+          totalSupply && actualTotalAssets && actualTotalAssets > 0n
+            ? (withdrawAmountWei * totalSupply) / actualTotalAssets
+            : withdrawAmountWei;
+
+        // Add 5% slippage tolerance
+        const minAssets = ((withdrawAmountWei * 95n) / 100n).toString();
+
+        if (freeLiquidity && freeLiquidity >= withdrawAmountWei) {
+          // Use instant redemption with slippage protection
+          await redeem({
+            functionName: "redeemSTT",
+            args: [sharesToBurn, BigInt(minAssets), connectedAddress, connectedAddress],
+          });
+        } else {
+          // Use queue system when there's insufficient liquidity
+          await requestWithdrawal({
+            functionName: "requestWithdrawal",
+            args: [sharesToBurn], // true = always return STT
+          });
+        }
       }
       setAmount("");
       onSuccess?.();

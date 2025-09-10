@@ -52,7 +52,7 @@ describe("Covus Liquid Staking Protocol", function () {
       expect(await vault.totalAssets()).to.equal(ethers.parseEther("10"));
       expect(await vault.totalSupply()).to.equal(ethers.parseEther("10"));
       expect(await vault.queuedAssets()).to.equal(0);
-      expect(await vault.paused()).to.be.false;
+      expect(await vault.paused()).to.equal(false);
       expect(await vault.maxSlippageBps()).to.equal(500); // 5%
     });
   });
@@ -126,7 +126,6 @@ describe("Covus Liquid Staking Protocol", function () {
     });
 
     it("Should allow instant withdrawals in WETH", async function () {
-      const sharesToBurn = ethers.parseEther("2");
       const initialWSTTBalance = await ethers
         .getContractAt("IERC20", await mockWSTT.getAddress())
         .then(c => c.balanceOf(user1.address));
@@ -148,14 +147,14 @@ describe("Covus Liquid Staking Protocol", function () {
 
     it("Should queue withdrawals when liquidity is insufficient", async function () {
       // Request withdrawal that exceeds available liquidity
-      await vault.connect(user1).requestWithdrawal(ethers.parseEther("3"), false);
+      await vault.connect(user1).requestWithdrawal(ethers.parseEther("3"));
 
       expect(await vault.pendingRequests()).to.equal(1);
       expect(await vault.queuedAssets()).to.equal(ethers.parseEther("3"));
     });
 
     it("Should process queued withdrawals when liquidity becomes available", async function () {
-      await vault.connect(user1).requestWithdrawal(ethers.parseEther("3"), false);
+      await vault.connect(user1).requestWithdrawal(ethers.parseEther("3"));
 
       // Add liquidity back
       await vault.connect(user3).depositSTT(user3.address, { value: ethers.parseEther("10") });
@@ -167,8 +166,8 @@ describe("Covus Liquid Staking Protocol", function () {
     });
 
     it("Should handle multiple queued withdrawals in FIFO order", async function () {
-      await vault.connect(user1).requestWithdrawal(ethers.parseEther("2"), false);
-      await vault.connect(user2).requestWithdrawal(ethers.parseEther("2"), false);
+      await vault.connect(user1).requestWithdrawal(ethers.parseEther("2"));
+      await vault.connect(user2).requestWithdrawal(ethers.parseEther("2"));
 
       expect(await vault.pendingRequests()).to.equal(2);
 
@@ -200,13 +199,13 @@ describe("Covus Liquid Staking Protocol", function () {
         value: rewardAmount,
       });
 
-      const initialVaultWSTTBalance = await mockWSTT.balanceOf(await vault.getAddress());
+      const initialVaultETHBalance = await ethers.provider.getBalance(await vault.getAddress());
 
       await stakingManager.connect(owner).sendRewards(rewardAmount);
 
-      // Check that WSTT was added to vault (ETH was wrapped)
-      const finalVaultWSTTBalance = await mockWSTT.balanceOf(await vault.getAddress());
-      expect(finalVaultWSTTBalance).to.be.gte(initialVaultWSTTBalance + rewardAmount);
+      // Check that STT was sent to vault (native balance increased)
+      const finalVaultETHBalance = await ethers.provider.getBalance(await vault.getAddress());
+      expect(finalVaultETHBalance).to.be.gte(initialVaultETHBalance + rewardAmount);
     });
   });
 
@@ -231,13 +230,13 @@ describe("Covus Liquid Staking Protocol", function () {
 
     it("Should detect healthy exchange rate", async function () {
       let isHealthy = await vault.isExchangeRateHealthy();
-      expect(isHealthy).to.be.true;
+      expect(isHealthy).to.equal(true);
 
       // Add some rewards to make rate slightly higher but still healthy
       await mockWSTT.connect(owner).approve(await vault.getAddress(), ethers.parseEther("0.1"));
       await vault.connect(owner).reportRewards(ethers.parseEther("0.1"));
       isHealthy = await vault.isExchangeRateHealthy();
-      expect(isHealthy).to.be.true;
+      expect(isHealthy).to.equal(true);
     });
   });
 
@@ -251,8 +250,7 @@ describe("Covus Liquid Staking Protocol", function () {
       const shares = ethers.parseEther("1");
       const minAssets = ethers.parseEther("0.95"); // 5% slippage tolerance
 
-      await expect(vault.connect(user1).redeemWithSlippage(shares, minAssets, user1.address, user1.address)).to.not.be
-        .reverted;
+      await expect(vault.connect(user1).redeemSTT(shares, minAssets, user1.address, user1.address)).to.not.be.reverted;
     });
 
     it("Should reject redemption with too high slippage", async function () {
@@ -260,7 +258,7 @@ describe("Covus Liquid Staking Protocol", function () {
       const minAssets = ethers.parseEther("1.1"); // Expect more assets than possible (110% of shares)
 
       await expect(
-        vault.connect(user1).redeemWithSlippage(shares, minAssets, user1.address, user1.address),
+        vault.connect(user1).redeemSTT(shares, minAssets, user1.address, user1.address),
       ).to.be.revertedWithCustomError(vault, "SlippageTooHigh");
     });
 
@@ -268,7 +266,7 @@ describe("Covus Liquid Staking Protocol", function () {
       const assets = ethers.parseEther("1");
       const maxShares = ethers.parseEther("1.05"); // 5% slippage tolerance
 
-      await expect(vault.connect(user1).withdrawWithSlippage(assets, maxShares, user1.address, user1.address)).to.not.be
+      await expect(vault.connect(user1).withdrawSTT(assets, maxShares, user1.address, user1.address)).to.not.be
         .reverted;
     });
 
@@ -277,42 +275,49 @@ describe("Covus Liquid Staking Protocol", function () {
       const maxShares = ethers.parseEther("0.99"); // Very low slippage tolerance
 
       await expect(
-        vault.connect(user1).withdrawWithSlippage(assets, maxShares, user1.address, user1.address),
+        vault.connect(user1).withdrawSTT(assets, maxShares, user1.address, user1.address),
       ).to.be.revertedWithCustomError(vault, "SlippageTooHigh");
     });
 
     it("Should correctly check slippage acceptability", async function () {
       const shares = ethers.parseEther("1");
       const isAcceptable = await vault.isSlippageAcceptable(shares);
-      expect(isAcceptable).to.be.true;
+      expect(isAcceptable).to.equal(true);
     });
   });
 
   describe("Emergency Controls", function () {
+    beforeEach(async function () {
+      // Give user1 some shares to test withdrawal
+      await vault.connect(user1).depositSTT(user1.address, { value: ethers.parseEther("5") });
+    });
+
     it("Should pause and unpause correctly", async function () {
       // Initially not paused
-      expect(await vault.paused()).to.be.false;
+      expect(await vault.paused()).to.equal(false);
 
       // Pause
       await vault.connect(owner).pause();
-      expect(await vault.paused()).to.be.true;
+      expect(await vault.paused()).to.equal(true);
 
       // Try to deposit while paused
       await expect(
-        vault.connect(user1).depositSTT(user1.address, { value: ethers.parseEther("1") }),
+        vault.connect(user2).depositSTT(user2.address, { value: ethers.parseEther("1") }),
       ).to.be.revertedWithCustomError(vault, "ContractPaused");
 
       // Try to withdraw while paused
       await expect(
-        vault.connect(user1).withdraw(ethers.parseEther("1"), user1.address, user1.address),
+        vault
+          .connect(user1)
+          .withdrawSTT(ethers.parseEther("1"), ethers.parseEther("1.1"), user1.address, user1.address),
       ).to.be.revertedWithCustomError(vault, "ContractPaused");
 
       // Unpause
       await vault.connect(owner).unpause();
-      expect(await vault.paused()).to.be.false;
+      expect(await vault.paused()).to.equal(false);
 
       // Should work again
-      await expect(vault.connect(user1).depositSTT(user1.address, { value: ethers.parseEther("1") })).to.not.be
+      await expect(vault.connect(user2).depositSTT(user2.address, { value: ethers.parseEther("1") })).to.not.be
         .reverted;
     });
 
