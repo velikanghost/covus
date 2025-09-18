@@ -1,8 +1,10 @@
 # Covus - Liquid Staking Protocol
 
-A decentralized liquid staking protocol built with Scaffold-ETH 2, allowing users to stake STT and receive liquid csSTT tokens representing their staked position.
+A decentralized liquid staking protocol, allowing users to stake STT and receive liquid csSTT tokens representing their staked position.
 
 ## 🏗️ Architecture
+
+![Covus Architecture Diagram](./flowchart.png)
 
 ### Core Components
 
@@ -141,6 +143,13 @@ yarn deploy
 ```bash
 yarn deploy --network somniaTestnet
 ```
+
+## 📋 Contract Addresses
+
+### Somnia Testnet (Chain ID: 50312)
+
+- **CovusVault**: `0x4A8C94962Ca9f2eE9312221093be6d5Ef7a334Dc`
+- **StakingManager**: `0xfB828C72F2002D58B4a754D2EdaebEDB0Fb6baCa`
 
 ## 📊 Protocol Metrics
 
