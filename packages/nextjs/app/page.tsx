@@ -27,7 +27,7 @@ const Home: NextPage = () => {
 
   // Mock data for demonstration
   const mockData = {
-    totalStakers: 15420,
+    totalStakers: 3,
     averageAPY: 4.2,
     protocolRevenue: 234567,
   };
