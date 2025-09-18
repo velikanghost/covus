@@ -10,7 +10,7 @@ A decentralized liquid staking protocol, allowing users to stake STT and receive
 
 - **CovusVault**: ERC-4626 compliant vault that manages deposits, withdrawals, and share accounting
 - **StakingManager**: Mock validator operator for simulating ETH2 staking operations
-- **MockWETH**: Wrapped STT implementation for local testing
+- **MockWSTT**: Wrapped STT implementation for local testing
 - **Withdrawal Queue**: FIFO queue system for handling withdrawals when liquidity is insufficient
 
 ### Key Features
@@ -50,12 +50,12 @@ yarn start
 ### 1. Deposit Phase
 
 - User calls `depositSTT()` with STT
-- STT is wrapped to WETH and deposited into the vault
+- STT is wrapped to WSTT and deposited into the vault
 - User receives csSTT shares based on current exchange rate
 
 ### 2. Staking Phase
 
-- Protocol operator calls `stakeWithManager()` to send WETH to validators
+- Protocol operator calls `stake()` on StakingManager to send WSTT to validators
 - StakingManager simulates ETH2 deposits (production: real validator infrastructure)
 
 ### 3. Rewards Phase
@@ -89,7 +89,7 @@ yarn test --gas
 - ✅ Contract deployment and initialization
 - ✅ STT deposits and share minting
 - ✅ Reward distribution and exchange rate updates
-- ✅ Instant withdrawals (STT and WETH)
+- ✅ Instant withdrawals (STT and WSTT)
 - ✅ Withdrawal queue mechanics
 - ✅ StakingManager integration
 - ✅ Admin functions
@@ -102,8 +102,8 @@ yarn test --gas
 ```
 contracts/
 ├── IWETH.sol              # WETH interface
-├── MockWETH.sol           # Mock WETH for testing
-├── CovusVault.sol  # Main vault contract
+├── MockWSTT.sol           # Mock WSTT for testing
+├── CovusVault.sol         # Main vault contract
 └── StakingManager.sol     # Mock validator operator
 ```
 
@@ -111,17 +111,21 @@ contracts/
 
 #### User Functions
 
-- `depositETH(address receiver)` - Deposit STT, receive csSTT
-- `withdraw(uint256 assets, address receiver, address owner)` - Instant withdrawal
-- `redeem(uint256 shares, address receiver, address owner)` - Instant redemption
-- `requestWithdrawal(uint256 shares, bool toETH)` - Queue withdrawal request
+- `depositSTT(address receiver)` - Deposit STT, receive csSTT
+- `withdrawSTT(uint256 assets, uint256 maxShares, address receiver, address owner)` - Instant withdrawal with slippage protection
+- `redeemSTT(uint256 shares, uint256 minAssets, address receiver, address owner)` - Instant redemption with slippage protection
+- `requestWithdrawal(uint256 shares)` - Queue withdrawal request
 
 #### Admin Functions
 
 - `reportRewards(uint256 amount)` - Record staking rewards
-- `unwrapToETH(uint256 amount)` - Convert WETH to STT
-- `wrapETH()` - Convert STT to WETH
+- `unwrapToSTT(uint256 amount)` - Convert WSTT to STT
+- `wrapSTT()` - Convert STT to WSTT
 - `processQueue(uint256 maxRequests)` - Process queued withdrawals
+- `pause()` - Pause all operations
+- `unpause()` - Unpause operations
+- `setMaxSlippage(uint256 newSlippage)` - Update maximum slippage
+- `approveWSTT(address spender, uint256 amount)` - Approve WSTT spending
 
 #### View Functions
 
@@ -129,6 +133,10 @@ contracts/
 - `freeLiquidity()` - Available liquidity for instant withdrawals
 - `pendingRequests()` - Number of queued withdrawal requests
 - `convertToAssets(uint256 shares)` - Preview STT for shares
+- `getCsSTTSTTRate()` - Get current csSTT/STT exchange rate
+- `getCsSTTPrice()` - Get csSTT price for external integrations
+- `isExchangeRateHealthy()` - Check if exchange rate is healthy
+- `isSlippageAcceptable(uint256 shares)` - Check if redemption would exceed slippage limits
 
 ## 🌐 Deployment
 
@@ -157,7 +165,7 @@ Track these key metrics:
 
 - `totalAssets()` - Total vault value
 - `totalSupply()` - Total csSTT supply
-- `exchangeRate()` - csSTT to STT conversion rate
+- `getCsSTTSTTRate()` - csSTT to STT conversion rate
 - `queuedAssets()` - Assets reserved for queued withdrawals
 - `freeLiquidity()` - Available for instant withdrawals
 - `pendingRequests()` - Number of queued withdrawal requests
